@@ -11,11 +11,16 @@ public class Spawner : MonoBehaviour
     bool spawnFlag = true;
     int spawnType;
     float spawnTimer = 0.0f;
+    float timerLimit = 10.0f;
     float spawnOffsetX;
     float spawnOffsetZ;
     Vector3 spawnPosition;
 
-    public float spawnRangeLimit = 4.0f;
+    Vector3 rotationAngles;
+    Quaternion spawnRotation;
+
+    public float xOffsetLimit = 9.0f;
+    public float zOffsetLimit = 3.0f;
 
     // Start is called before the first frame update
     void Start()
@@ -29,31 +34,43 @@ public class Spawner : MonoBehaviour
         if (spawnFlag)
         {            
             //Random offset is added to X and Z values of the spawn position.
-            spawnOffsetX = Random.Range(-spawnRangeLimit, spawnRangeLimit);
-            spawnOffsetZ = Random.Range(-spawnRangeLimit, spawnRangeLimit);
+            spawnOffsetX = Random.Range(-xOffsetLimit, xOffsetLimit);
+            spawnOffsetZ = Random.Range(-zOffsetLimit, zOffsetLimit);
             spawnPosition = gameObject.transform.position + (Vector3.right * spawnOffsetX) + (Vector3.forward * spawnOffsetZ);
-            //spawnType = (int) Random.Range(0, 6);
-            spawnType = 0;
+            spawnType = (int) Random.Range(0, spawnPrefab.Length);
 
-            tempObj = recycler.getFromBin(spawnType);
+            if (spawnType == 2)
+            {
+                spawnRotation.eulerAngles = new Vector3(180, 0, 0);
+            }
+            else
+            {
+                spawnRotation = gameObject.transform.rotation;
+            }
+
+            tempObj = recycler.getFromBin(spawnType);            
 
             //If getFromBin fetched relevant object from corresponding bin.
             if (tempObj != null)
             {
-                
-                tempObj.transform.rotation = Quaternion.identity;
+
+                tempObj.transform.rotation = spawnRotation;
                 tempObj.transform.position = spawnPosition;
                 tempObj.GetComponent<ObjectManager>().inBin = false;
+                tempObj.GetComponent<Rigidbody>().velocity = Vector3.zero;
                 tempObj.SetActive(true);
                 spawnTimer = 0.0f;
+                timerLimit = Random.Range(5.0f, 10.0f);
                 spawnFlag = false;
 
                 Debug.Log("Object spawned from recycle. Object type:" + spawnType);
             }
             else
             {
-                Instantiate(spawnPrefab[spawnType], spawnPosition, gameObject.transform.rotation);
+                Instantiate(spawnPrefab[spawnType], spawnPosition, spawnRotation);               
+
                 spawnTimer = 0.0f;
+                timerLimit = Random.Range(5.0f, 10.0f);
                 spawnFlag = false;
             }
             
@@ -62,7 +79,7 @@ public class Spawner : MonoBehaviour
         else
         {            
             spawnTimer += 0.1f;
-            if(spawnTimer >= 10.0f)
+            if(spawnTimer >= timerLimit)
             {
                 spawnFlag = true;
             }

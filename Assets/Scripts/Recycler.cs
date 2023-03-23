@@ -5,7 +5,7 @@ using UnityEngine;
 public class Recycler : MonoBehaviour
 {
     public const int objectTypeCount = 7;
-    public const int binLength = 10;
+    public const int binLength = 1000;
     public int whileLimit = 3000;
     int[] lastBinObjectPointer = new int[objectTypeCount] { -1, -1, -1, -1, -1, -1, -1 }; // -1 indicates the corresponding bin is empty.
 
@@ -13,8 +13,8 @@ public class Recycler : MonoBehaviour
     /* 0 - Collectible Blue (positive)
      * 1 - Collectible Red (negative)
      * 2 - Leech (Monster/Creature)
-     * 3 - Portal Blue (positive)
-     * 4 - Portal Red (negative)
+     * 3 - Wall Tiles
+     * 4 - Portal Red (negative)xxx
      * 5 - Blaster (Tool/Weapon)
      * 6 - Shield (Tool/Weapon)
      */
@@ -39,6 +39,12 @@ public class Recycler : MonoBehaviour
     public bool pushToBin(GameObject obj, int type)
     {
         int binStatusCheckTimer = 0;
+
+        if(lastBinObjectPointer[type] >= binLength - 1)
+        {
+            Destroy(obj);
+            return false;
+        }
 
         while (pushOngoing[type] || getOngoing[type])
         {
@@ -92,7 +98,7 @@ public class Recycler : MonoBehaviour
         }
         else
         {
-            Debug.Log("Corresponding bin is found empty. getFromBin failed for object type:" + type);
+            //Debug.Log("Corresponding bin is found empty. getFromBin failed for object type:" + type);
             return null;
         }
     }

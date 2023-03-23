@@ -9,8 +9,13 @@ public class ObjectManager : MonoBehaviour
 
     Recycler recycler;
 
+    public bool isAttached = false;
+    public bool wasAttached = false;
     public int pushAttemptLimit = 10;
     public bool inBin = false;
+    float attachedTimer = 0.0f;
+
+    //public GameManager gMan;
 
 
     // Start is called before the first frame update
@@ -31,6 +36,19 @@ public class ObjectManager : MonoBehaviour
         {
             gameObject.SetActive(true);
         }
+
+        //Executes when the creature is attached to the player.
+        if(type == 2 && isAttached == true && !wasAttached)
+        {
+            attachedTimer += 0.1f;
+            if(attachedTimer > 10.0f)
+            {
+                wasAttached = true;
+                gameObject.GetComponent<Rigidbody>().useGravity = true;
+                isAttached = false;                
+                attachedTimer = 0.0f;
+            }
+        }
     }
 
     private void OnTriggerEnter(Collider other)
@@ -41,9 +59,12 @@ public class ObjectManager : MonoBehaviour
         if(other.tag == "Recycler" && !inBin)
         {
             recycler = other.gameObject.GetComponent<Recycler>();
-
             int attemptCount = 0;
-            inBin = true;
+            //inBin = true;
+            isAttached = false;
+            wasAttached = false;
+            attachedTimer = 0.0f;
+
             while(!pushStatus)
             {
                 pushStatus = recycler.pushToBin(gameObject, type);
@@ -55,6 +76,22 @@ public class ObjectManager : MonoBehaviour
             }
 
             if (!pushStatus) Destroy(gameObject);
+            else inBin = true;
+        }
+        else
+        {
+            if(other.tag == "Player" && !wasAttached)
+            {
+                if (type == 0) { }
+                if (type == 1) { }
+                if (type == 2 && !wasAttached)
+                {
+                    gameObject.GetComponent<Rigidbody>().useGravity = false;
+                    gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
+                    gameObject.transform.position = other.gameObject.transform.position - (Vector3.up * 0.2f);
+                    isAttached = true;
+                }
+            }
         }
     }
 }
