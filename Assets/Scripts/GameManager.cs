@@ -31,6 +31,7 @@ public class GameManager : MonoBehaviour
     float rSpanCurr;
     float ratioL2R;
     float speed;
+    float rotationResetTimer = 0.0f;
 
     Color blue = new Color(0.15f, 0.6f, 0.8f);
     Color red = new Color(0.86f, 0.16f, 0.23f);
@@ -39,12 +40,14 @@ public class GameManager : MonoBehaviour
     public GameObject rHandPrefab;
     public GameObject centerEyeHMDObject;
     public GameObject playerController;
+    public GameObject player;
     public GameObject headset;
     public GameObject shield;
 
     CharacterController controller;
 
     Vector3 resetPosition = Vector3.zero;
+    Vector3 resetRotation = Vector3.zero;
 
 
     // Start is called before the first frame update
@@ -62,17 +65,23 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         gameTime += 1.0f;
-        playerLife -= 0.01f;
+        playerLife -= 0.005f;
         IsPlayerDead(); //Checks if the player is dead and does the necessary if player ran out of life.
         SetFog();
         if(shieldStatus) Shield();
 
         //Resets the player z-position and y-rotation.
-        //if(playerController.transform.rotation.eulerAngles.y != 0)
-        //{
-        //    resetRotation = playerController.transform.rotation.eulerAngles;
-        //    playerController.transform.rotation = Quaternion.Euler(resetRotation.x, 0, resetRotation.z);
-        //}
+        if(rotationResetTimer < 20.0f)
+        {
+            rotationResetTimer++;
+
+            if (playerController.transform.rotation.eulerAngles.y != 0)
+            {
+                resetRotation = playerController.transform.rotation.eulerAngles;
+                playerController.transform.rotation = Quaternion.Euler(resetRotation.x, 0, resetRotation.z);
+            }
+        }        
+
         ////Sets and updates gravity scale.
         //if (setGravityScale != gravityScale)
         //{
@@ -80,11 +89,11 @@ public class GameManager : MonoBehaviour
         //    setGravityScale = gravityScale;
         //}
 
-        if (playerController.transform.position.z != 0)
+        if (player.transform.position.z != 0)
         {
-            resetPosition = playerController.transform.position;
+            resetPosition = player.transform.position;
             resetPosition.z = 0.0f;
-            playerController.transform.position = resetPosition;
+            player.transform.position = resetPosition;
         }   
 
         //Updates Hand Span details.
@@ -96,7 +105,7 @@ public class GameManager : MonoBehaviour
         MovePlayerUsingSpan();
 
         //DELETELATER (For testing purposes)
-        MovePlayerUsingKeyboard();         
+        //MovePlayerUsingKeyboard();         
      
         if((Mathf.Abs(lSpanCurr) + Mathf.Abs(rSpanCurr)) != 0)
         {
@@ -150,23 +159,23 @@ public class GameManager : MonoBehaviour
     }
 
     //For testing purpose only.
-    void MovePlayerUsingKeyboard()
-    {
-        if (Input.GetKey(KeyCode.D))
-        {
-            //rSpanCurr = 10;
-            //lSpanCurr = 1;
+    //void MovePlayerUsingKeyboard()
+    //{
+    //    if (Input.GetKey(KeyCode.D))
+    //    {
+    //        //rSpanCurr = 10;
+    //        //lSpanCurr = 1;
 
-            controller.Move(-2.0f * headset.transform.right * Time.deltaTime * characterSpeed);
-        }
-        if (Input.GetKey(KeyCode.A))
-        {
-            //lSpanCurr = 10;
-            //rSpanCurr = 1;
+    //        controller.Move(-2.0f * headset.transform.right * Time.deltaTime * characterSpeed);
+    //    }
+    //    if (Input.GetKey(KeyCode.A))
+    //    {
+    //        //lSpanCurr = 10;
+    //        //rSpanCurr = 1;
 
-            controller.Move(headset.transform.right * Time.deltaTime * characterSpeed);
-        }
-    }
+    //        controller.Move(headset.transform.right * Time.deltaTime * characterSpeed);
+    //    }
+    //}
 
     //Checks if the player is dead; if dead, does the necessary.
     void IsPlayerDead()
@@ -190,7 +199,7 @@ public class GameManager : MonoBehaviour
         if(!shield.activeInHierarchy) shield.SetActive(true);
 
         Vector3 tempShieldPosition = shield.transform.position;
-        tempShieldPosition.x = playerController.transform.position.x;
+        tempShieldPosition.x = player.transform.position.x;
         shield.transform.position = tempShieldPosition;
 
         shieldTimer++;

@@ -55,6 +55,9 @@ public class ObjectManager : MonoBehaviour
         {
             Wall();
         }
+
+        //Unless the object is wall component, the z axis position is matched to that of the player.
+        //if (type != 3) MoveTowardsPlayerZ();
     }
 
     private void OnTriggerEnter(Collider other)
@@ -72,7 +75,7 @@ public class ObjectManager : MonoBehaviour
 
                 if (type == 0)
                 {
-                    gMan.playerLife += 0.5f;
+                    gMan.playerLife += 2.0f;
 
                     if(isShieldBooster)
                     {
@@ -84,7 +87,7 @@ public class ObjectManager : MonoBehaviour
                 }
                 if (type == 1)
                 {
-                    gMan.playerLife -= 0.5f;
+                    gMan.playerLife -= 1.0f;
                     BinIt();
                 }
                 if (type == 2 && !wasAttached && !gMan.shieldStatus)
@@ -119,7 +122,7 @@ public class ObjectManager : MonoBehaviour
         if (isAttached == true && !wasAttached)
         {
             gameObject.transform.position = player.transform.position - (Vector3.up * 0.2f);
-            gMan.playerLife -= 0.05f;
+            gMan.playerLife -= 0.01f;
 
             attachedTimer += 0.1f;
 
@@ -189,5 +192,13 @@ public class ObjectManager : MonoBehaviour
                 shieldBoosterIndicator.SetActive(false);
             }
         }
+    }
+
+    //Unless the object is wall component, the z axis position is matched to that of the player.
+    void MoveTowardsPlayerZ()
+    {
+        Vector3 tempPosition = gameObject.transform.position;
+        tempPosition.z = gMan.player.transform.position.z;
+        gameObject.transform.position = tempPosition;
     }
 }
