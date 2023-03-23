@@ -8,3 +8,5 @@ An exploratory investigation on non-traditional postures in virtual reality (VR)
 Type: Masters dissertation    |   Timeline: June 2022 - October 2022    |   Team: Solo
 
 For more info: https://kalleri.me/virtual-reality-gaming-for-non-traditional-postures
+
+(Note that this project was published here after the project was finished using the local backups from various stages of the project.)
