@@ -63,7 +63,7 @@ public class Recycler : MonoBehaviour
 
         pushOngoing[type] = false;
 
-        Debug.Log("Push Succesful. Object type pushed:" + type);
+        //Debug.Log("Push Succesful. Object type pushed:" + type);
         return true;
     }
 
@@ -93,7 +93,7 @@ public class Recycler : MonoBehaviour
 
             getOngoing[type] = false;
 
-            Debug.Log("Successfully fetched from bin. Object type:" + type);
+            //Debug.Log("Successfully fetched from bin. Object type:" + type);
             return getObj;            
         }
         else

@@ -1871,7 +1871,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   type: 2
-  isNegative: 0
+  isNegative: 1
   isAttached: 0
   wasAttached: 0
   pushAttemptLimit: 10

@@ -37,7 +37,7 @@ public class WallSpawner : MonoBehaviour
                     
                     lastObject = tempObj;
 
-                    Debug.Log("Object spawned from recycle. Object type: WALL TILES");
+                    //Debug.Log("Object spawned from recycle. Object type: WALL TILES");
                 }
                 else
                 {

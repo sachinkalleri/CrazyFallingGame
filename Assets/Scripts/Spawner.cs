@@ -20,7 +20,7 @@ public class Spawner : MonoBehaviour
     Quaternion spawnRotation;
 
     public float xOffsetLimit = 9.0f;
-    public float zOffsetLimit = 3.0f;
+    public float zOffsetLimit = 0.01f;
 
     // Start is called before the first frame update
     void Start()
@@ -36,7 +36,7 @@ public class Spawner : MonoBehaviour
             //Random offset is added to X and Z values of the spawn position.
             spawnOffsetX = Random.Range(-xOffsetLimit, xOffsetLimit);
             spawnOffsetZ = Random.Range(-zOffsetLimit, zOffsetLimit);
-            spawnPosition = gameObject.transform.position + (Vector3.right * spawnOffsetX) + (Vector3.forward * spawnOffsetZ);
+            spawnPosition = gameObject.transform.position + (Vector3.right * spawnOffsetX) /*+ (Vector3.forward * spawnOffsetZ)*/;
             spawnType = (int) Random.Range(0, spawnPrefab.Length);
 
             if (spawnType == 2)
@@ -53,21 +53,23 @@ public class Spawner : MonoBehaviour
             //If getFromBin fetched relevant object from corresponding bin.
             if (tempObj != null)
             {
+                if (spawnType == 0) tempObj.GetComponent<ObjectManager>().InitiateCollectibleBlue();
 
                 tempObj.transform.rotation = spawnRotation;
                 tempObj.transform.position = spawnPosition;
                 tempObj.GetComponent<ObjectManager>().inBin = false;
-                tempObj.GetComponent<Rigidbody>().velocity = Vector3.zero;
+                tempObj.GetComponent<Rigidbody>().velocity = new Vector3(0.0f, 9.8f, 0.0f);
                 tempObj.SetActive(true);
                 spawnTimer = 0.0f;
                 timerLimit = Random.Range(5.0f, 10.0f);
                 spawnFlag = false;
 
-                Debug.Log("Object spawned from recycle. Object type:" + spawnType);
+                //Debug.Log("Object spawned from recycle. Object type:" + spawnType);
             }
             else
             {
-                Instantiate(spawnPrefab[spawnType], spawnPosition, spawnRotation);               
+                tempObj = Instantiate(spawnPrefab[spawnType], spawnPosition, spawnRotation);
+                tempObj.GetComponent<Rigidbody>().velocity = new Vector3(0.0f, 9.8f, 0.0f);
 
                 spawnTimer = 0.0f;
                 timerLimit = Random.Range(5.0f, 10.0f);

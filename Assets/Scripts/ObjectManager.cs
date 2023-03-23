@@ -6,28 +6,103 @@ public class ObjectManager : MonoBehaviour
 {
     public int type;
     public bool isNegative;
+    public bool isShieldBooster;
+
+    //Color blue = new Color (0.15f,0.6f, 0.8f);
+    //Color red;
+    //Color wallColor;
 
     Recycler recycler;
+    GameObject player;
+    GameManager gMan;
 
     public bool isAttached = false;
     public bool wasAttached = false;
     public int pushAttemptLimit = 10;
     public bool inBin = false;
+
+    float wallColorPicker;
     float attachedTimer = 0.0f;
 
-    //public GameManager gMan;
-
+    public GameObject shieldBoosterIndicator;
 
     // Start is called before the first frame update
     void Start()
     {
-        
+        gMan = GameObject.FindWithTag("GameManager").GetComponent<GameManager>();
+        recycler = GameObject.FindWithTag("Recycler").GetComponent<Recycler>();
+        if (type == 0) InitiateCollectibleBlue();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(inBin && gameObject.activeInHierarchy)
+        if(gMan == null)
+        {
+            gMan = GameObject.FindWithTag("GameManager").GetComponent<GameManager>();
+        }
+
+        if(recycler == null)
+        {
+            recycler = GameObject.FindWithTag("Recycler").GetComponent<Recycler>();
+        }
+
+        ActiveStatusMonitor();
+
+        if(type == 2) Creature();
+
+        if(type == 3)
+        {
+            Wall();
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        //If object collides with recycler, process to bin it is initiated.        
+        if(other.tag == "Recycler" && !inBin)
+        {
+            BinIt();
+        }
+        else
+        {
+            if (other.tag == "Player")
+            {
+                player = other.gameObject;
+
+                if (type == 0)
+                {
+                    gMan.playerLife += 0.5f;
+
+                    if(isShieldBooster)
+                    {
+                        Debug.Log("Shield Booster Collected");
+                        gMan.shieldTimer = 0.0f;
+                        gMan.shieldStatus = true;
+                    }
+                    BinIt();
+                }
+                if (type == 1)
+                {
+                    gMan.playerLife -= 0.5f;
+                    BinIt();
+                }
+                if (type == 2 && !wasAttached && !gMan.shieldStatus)
+                {
+                    AttachCreature();
+                }
+            }
+
+            if(other.tag == "Shield")
+            {
+                if (isNegative) BinIt();
+            }
+        }
+    }
+
+    void ActiveStatusMonitor()
+    {
+        if (inBin && gameObject.activeInHierarchy)
         {
             gameObject.SetActive(false);
         }
@@ -36,61 +111,82 @@ public class ObjectManager : MonoBehaviour
         {
             gameObject.SetActive(true);
         }
+    }
 
+    void Creature()
+    {
         //Executes when the creature is attached to the player.
-        if(type == 2 && isAttached == true && !wasAttached)
+        if (isAttached == true && !wasAttached)
         {
+            gameObject.transform.position = player.transform.position - (Vector3.up * 0.2f);
+            gMan.playerLife -= 0.05f;
+
             attachedTimer += 0.1f;
-            if(attachedTimer > 10.0f)
+
+            if (attachedTimer > 10.0f || gMan.shieldStatus)
             {
                 wasAttached = true;
                 gameObject.GetComponent<Rigidbody>().useGravity = true;
-                isAttached = false;                
+                isAttached = false;
                 attachedTimer = 0.0f;
             }
         }
     }
 
-    private void OnTriggerEnter(Collider other)
+    void AttachCreature()
     {
+        gameObject.GetComponent<Rigidbody>().useGravity = false;
+        gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
+        gameObject.transform.position = player.transform.position - (Vector3.up * 0.2f);
+        isAttached = true;
+    }
+
+    void Wall()
+    {
+        //wallColorPicker = gMan.playerLife / 10.0f;
+        //wallColor = Color.Lerp(Color.red, blue, wallColorPicker);
+        gameObject.GetComponent<Renderer>().material.SetColor("_Color", gMan.lifeStatusColor);
+        gameObject.GetComponent<Renderer>().material.SetColor("_EmissionColor", gMan.lifeStatusColor);
+    }
+
+    void BinIt()
+    {
+        if (type == 0) shieldBoosterIndicator.SetActive(false);
         bool pushStatus = false;
+        int attemptCount = 0;
+        isShieldBooster = false;
+        isAttached = false;
+        wasAttached = false;
+        attachedTimer = 0.0f;
 
-        //If object collides with recycler, process to bin it is initiated.
-        if(other.tag == "Recycler" && !inBin)
+        while (!pushStatus)
         {
-            recycler = other.gameObject.GetComponent<Recycler>();
-            int attemptCount = 0;
-            //inBin = true;
-            isAttached = false;
-            wasAttached = false;
-            attachedTimer = 0.0f;
-
-            while(!pushStatus)
+            pushStatus = recycler.pushToBin(gameObject, type);
+            attemptCount++;
+            if (attemptCount > pushAttemptLimit)
             {
-                pushStatus = recycler.pushToBin(gameObject, type);
-                attemptCount++;
-                if(attemptCount > pushAttemptLimit)
-                {
-                    break;
-                }
+                break;
             }
-
-            if (!pushStatus) Destroy(gameObject);
-            else inBin = true;
         }
-        else
+
+        if (!pushStatus) Destroy(gameObject);
+        else inBin = true;
+    }
+
+    public void InitiateCollectibleBlue()
+    {
+        if(type == 0)
         {
-            if(other.tag == "Player" && !wasAttached)
+            int randomizer = (int)Random.Range(0, 10);
+            if (randomizer < 2)
             {
-                if (type == 0) { }
-                if (type == 1) { }
-                if (type == 2 && !wasAttached)
-                {
-                    gameObject.GetComponent<Rigidbody>().useGravity = false;
-                    gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
-                    gameObject.transform.position = other.gameObject.transform.position - (Vector3.up * 0.2f);
-                    isAttached = true;
-                }
+                isShieldBooster = true;
+                shieldBoosterIndicator.SetActive(true);
+            }
+            else
+            {
+                isShieldBooster = false;
+                shieldBoosterIndicator.SetActive(false);
             }
         }
     }
