@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.SceneManagement;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.XR;
 
 public class GameManager : MonoBehaviour
 {
@@ -10,7 +12,7 @@ public class GameManager : MonoBehaviour
 
     public float playerLife = 10.0f;
     public float gameTime = 0.0f;
-    public bool shieldStatus = false;
+    public bool shieldStatus = false;    
     public float shieldTimer = 0.0f;
     public float lifeStatus;
     public Color lifeStatusColor = new Color(0.15f, 0.6f, 0.8f); //Initially set as blue.
@@ -32,6 +34,19 @@ public class GameManager : MonoBehaviour
     float ratioL2R;
     float speed;
     float rotationResetTimer = 0.0f;
+    float scoreCardTimer = 0.0f;
+    float isRHandExtended = 0.0f; //Used for Controller and Hand pose mode to control speed of the fall.
+    float isLHandExtended = 0.0f; //Used for Controller and Hand pose mode to control speed of the fall.
+    float speedConstant = 0.3f;
+
+    int gameTimeDisplaySeconds;
+    int gameTimeDisplayMinutes;
+    int lifeDisplay;
+
+    bool isLHandFist = false;
+    bool isRHandFist = false;
+    bool isRHandThumbsUp = false;
+    
 
     Color blue = new Color(0.15f, 0.6f, 0.8f);
     Color red = new Color(0.86f, 0.16f, 0.23f);
@@ -43,11 +58,27 @@ public class GameManager : MonoBehaviour
     public GameObject player;
     public GameObject headset;
     public GameObject shield;
+    public GameObject spawners;
+    public GameObject InfoSlab;
+    public GameObject controlSelectionTextObject;
+    public GameObject scoreTextObject;
 
+    public Text scoreText;
+    public Text lifeText;
+
+    public bool isPlayActive = false;
+    public bool isStarting = true;
+    public int inputModeSelected = -1;
+
+    public OVRMeshRenderer rHandMeshRenderer;
+    public OVRMeshRenderer lHandMeshRenderer;
     CharacterController controller;
 
     Vector3 resetPosition = Vector3.zero;
     Vector3 resetRotation = Vector3.zero;
+
+    private InputDevice rightController;
+    private InputDevice leftController;
 
 
     // Start is called before the first frame update
@@ -59,61 +90,97 @@ public class GameManager : MonoBehaviour
         GetCurrentSpan();
         lSpanMin = lSpanCurr;
         rSpanMin = rSpanCurr;
+        SetControllers();
     }
+
+
 
     // Update is called once per frame
     void Update()
     {
-        gameTime += 1.0f;
-        playerLife -= 0.005f;
+        if (!rHandMeshRenderer.shouldRender && !lHandMeshRenderer.shouldRender && (leftController == null || rightController == null)) SetControllers();
+        if (isPlayActive) UpdateStats();
+        DisplayStats();
         IsPlayerDead(); //Checks if the player is dead and does the necessary if player ran out of life.
         SetFog();
         if(shieldStatus) Shield();
+        ConstraintOnPlayerTransform();
 
-        //Resets the player z-position and y-rotation.
-        if(rotationResetTimer < 20.0f)
-        {
-            rotationResetTimer++;
-
-            if (playerController.transform.rotation.eulerAngles.y != 0)
-            {
-                resetRotation = playerController.transform.rotation.eulerAngles;
-                playerController.transform.rotation = Quaternion.Euler(resetRotation.x, 0, resetRotation.z);
-            }
-        }        
-
-        ////Sets and updates gravity scale.
-        //if (setGravityScale != gravityScale)
-        //{
-        //    Physics.gravity = new Vector3(0, 9.8f * gravityScale, 0);
-        //    setGravityScale = gravityScale;
-        //}
-
-        if (player.transform.position.z != 0)
-        {
-            resetPosition = player.transform.position;
-            resetPosition.z = 0.0f;
-            player.transform.position = resetPosition;
-        }   
-
-        //Updates Hand Span details.
-        //lSpanCurr = Mathf.Abs(centerEyeHMDObject.transform.InverseTransformPoint(lHandPrefab.transform.position).x);
-        //rSpanCurr = Mathf.Abs(centerEyeHMDObject.transform.InverseTransformPoint(rHandPrefab.transform.position).x);
+        //SetGravityLegacy();
+        //ObtainCurrentHandSpanLegacyMethod();        
 
         GetCurrentSpan();
         UpdateSpanMinMax();
-        MovePlayerUsingSpan();
+        ManageMovementAndPlayModes();
 
         //DELETELATER (For testing purposes)
-        //MovePlayerUsingKeyboard();         
-     
-        if((Mathf.Abs(lSpanCurr) + Mathf.Abs(rSpanCurr)) != 0)
+        //MovePlayerUsingKeyboard();
+
+        if (inputModeSelected == 0) SetGravityWithSpan();
+        if (inputModeSelected == 1) SetGravityWithHandPoseAndControllers();
+    }
+    /*Update Ends here*/
+
+
+
+    //To set the controllers up
+    void SetControllers()
+    {
+        List<InputDevice> devices = new List<InputDevice>();
+        InputDeviceCharacteristics rightControllerCharacteristics = InputDeviceCharacteristics.Right | InputDeviceCharacteristics.Controller;
+        InputDevices.GetDevicesWithCharacteristics(rightControllerCharacteristics, devices);
+
+        if (devices.Count > 0)
+        {
+            rightController = devices[0];
+        }
+
+        InputDeviceCharacteristics leftControllerCharacteristics = InputDeviceCharacteristics.Left | InputDeviceCharacteristics.Controller;
+        InputDevices.GetDevicesWithCharacteristics(leftControllerCharacteristics, devices);
+
+        if (devices.Count > 0)
+        {
+            leftController = devices[0];
+        }
+    }
+
+    //Sets gravity as multiple of 9.8, based on the set gravity scale. Used to invert gravity.
+    void SetGravityLegacy()
+    {
+        //Sets and updates gravity scale.
+        if (setGravityScale != gravityScale)
+        {
+            Physics.gravity = new Vector3(0, 9.8f * gravityScale, 0);
+            setGravityScale = gravityScale;
+        }
+    }
+
+    //Controls gravity with span to control the speed.
+    void SetGravityWithSpan()
+    {
+        if ((Mathf.Abs(lSpanCurr) + Mathf.Abs(rSpanCurr)) != 0)
         {
             //speed = (Mathf.Abs(lSpanMax) + Mathf.Abs(rSpanMax)) / (Mathf.Abs(lSpanCurr) + Mathf.Abs(rSpanCurr));
             speed = 1 / (Mathf.Abs(lSpanCurr) + Mathf.Abs(rSpanCurr));
             Physics.gravity = new Vector3(0, 9.8f * gravityScale * speed, 0);
             setGravityScale = gravityScale;
-        }        
+        }
+    }
+
+    //Adjusting speed by considering 
+    void SetGravityWithHandPoseAndControllers()
+    {
+        speed = 1 / (isLHandExtended + isRHandExtended + speedConstant);
+        Physics.gravity = new Vector3(0, 9.8f * gravityScale * speed, 0);
+        setGravityScale = gravityScale;        
+    }
+
+    //Tries to get hand span, not used anymore as better working solution has been found.
+    void ObtainCurrentHandSpanLegacyMethod()
+    {
+        //Updates Hand Span details.
+        lSpanCurr = Mathf.Abs(centerEyeHMDObject.transform.InverseTransformPoint(lHandPrefab.transform.position).x);
+        rSpanCurr = Mathf.Abs(centerEyeHMDObject.transform.InverseTransformPoint(rHandPrefab.transform.position).x);
     }
 
     //Gets the current span value of left hand and right by calculating the distance between the handprefab and centre eye camera.
@@ -158,34 +225,75 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    //For testing purpose only.
-    //void MovePlayerUsingKeyboard()
-    //{
-    //    if (Input.GetKey(KeyCode.D))
-    //    {
-    //        //rSpanCurr = 10;
-    //        //lSpanCurr = 1;
+    //Moves the player with hand pose input.
+    void MovePlayerUsingHandPose()
+    {
+        if (isRHandFist)
+        {            
+            controller.Move(-2.0f * headset.transform.right * Time.deltaTime * characterSpeed);
+        }
+        if (isLHandFist)
+        {
+            controller.Move(2.0f * headset.transform.right * Time.deltaTime * characterSpeed);
+        }
+    }
 
-    //        controller.Move(-2.0f * headset.transform.right * Time.deltaTime * characterSpeed);
-    //    }
-    //    if (Input.GetKey(KeyCode.A))
-    //    {
-    //        //lSpanCurr = 10;
-    //        //rSpanCurr = 1;
+    //Moves player using controllers.
+    void MovePlayerUsingControllers()
+    {
+        leftController.TryGetFeatureValue(CommonUsages.primaryButton, out bool leftPrimaryButtonValue);
+        rightController.TryGetFeatureValue(CommonUsages.primaryButton, out bool rightPrimaryButtonValue);
 
-    //        controller.Move(headset.transform.right * Time.deltaTime * characterSpeed);
-    //    }
-    //}
+        if (rightPrimaryButtonValue)
+        {
+            controller.Move(-2.0f * headset.transform.right * Time.deltaTime * characterSpeed);
+            isRHandExtended = 0.3f;
+        }
+        else isRHandExtended = 0.0f;
+
+        if (leftPrimaryButtonValue)
+        {
+            controller.Move(2.0f * headset.transform.right * Time.deltaTime * characterSpeed);
+            isLHandExtended = 0.3f;
+        }
+        else isLHandExtended = 0.0f;
+    }
+
+    //For testing purpose only. Moves player using keyboard input.
+    void MovePlayerUsingKeyboard()
+    {
+        if (Input.GetKey(KeyCode.D))
+        {
+            //rSpanCurr = 10;
+            //lSpanCurr = 1;
+
+            controller.Move(-2.0f * headset.transform.right * Time.deltaTime * characterSpeed);
+        }
+        if (Input.GetKey(KeyCode.A))
+        {
+            //lSpanCurr = 10;
+            //rSpanCurr = 1;
+
+            controller.Move(headset.transform.right * Time.deltaTime * characterSpeed);
+        }
+    }
 
     //Checks if the player is dead; if dead, does the necessary.
     void IsPlayerDead()
     {
         if (playerLife <= 0.0f)
         {
-            SceneManager.LoadScene("Game");
+            //SceneManager.LoadScene("Game");
+            int finalScoreDisplay = (int)Mathf.Round(gameTime);
+            scoreTextObject.GetComponent<Text>().text = "Score: " + finalScoreDisplay.ToString();
+            isStarting = false;
+            isPlayActive = false;
         }
+
+        if (playerLife > 10.0f) playerLife = 10.0f;
     }
 
+    //Sets the fog color and density based on remaining life.
     void SetFog()
     {
         lifeStatus = playerLife / 10.0f;
@@ -194,6 +302,7 @@ public class GameManager : MonoBehaviour
         RenderSettings.fogDensity = (1.0f - lifeStatus) / 10.0f;
     }
 
+    //Activates and manages shield.
     void Shield()
     {
         if(!shield.activeInHierarchy) shield.SetActive(true);
@@ -210,4 +319,156 @@ public class GameManager : MonoBehaviour
             shield.SetActive(false);
         }
     }
+
+    public void LHandFistOn()
+    {
+        if (!isLHandFist) isLHandFist = true;
+        isLHandExtended = 0.3f;
+    }
+
+    public void LHandFistOff()
+    {
+        if (isLHandFist) isLHandFist = false;
+        isLHandExtended = 0.0f;
+    }
+
+    public void RHandFistOn()
+    {
+        if (!isRHandFist) isRHandFist = true;
+        isRHandExtended = 0.3f;
+    }
+
+    public void RHandFistOff()
+    {
+        if (isRHandFist) isRHandFist = false;
+        isRHandExtended = 0.0f;
+    }
+
+    public void RHandThumbsUpOn()
+    {
+        if (!isRHandThumbsUp) isRHandThumbsUp = true;
+    }
+
+    public void RHandThumbsUpOff()
+    {
+        if (isRHandThumbsUp) isRHandThumbsUp = false;
+    }
+
+    void UpdateStats()
+    {
+        gameTime += 1.0f * Time.deltaTime;
+        //playerLife -= 0.5f * Time.deltaTime;
+        //playerLife -= Time.deltaTime * (Mathf.Pow(1.1f, (gameTime * 0.00001f)) + 0.5f);
+        playerLife -= (0.5f + (gameTime * 0.003f)) * Time.deltaTime;
+    }
+
+    void DisplayStats()
+    {
+        lifeDisplay = (int)Mathf.Round(playerLife);
+        lifeText.text = "Life: " + lifeDisplay.ToString();
+
+        gameTimeDisplaySeconds = (int)Mathf.Round(gameTime);
+        gameTimeDisplayMinutes = gameTimeDisplaySeconds / 60;
+        gameTimeDisplaySeconds = gameTimeDisplaySeconds % 60;
+        if (gameTimeDisplayMinutes > 0) scoreText.text = gameTimeDisplayMinutes.ToString() + "Minutes   " + gameTimeDisplaySeconds.ToString() + "Seconds";
+        else scoreText.text = "   " + gameTimeDisplaySeconds.ToString() + "Seconds";
+    }
+
+    void ConstraintOnPlayerTransform()
+    {
+        //Resets the player y-rotation for the first few seconds.
+        if (rotationResetTimer < 3.0f)
+        {
+            rotationResetTimer += 1.0f * Time.deltaTime;
+
+            if (playerController.transform.rotation.eulerAngles.y != 0)
+            {
+                resetRotation = playerController.transform.rotation.eulerAngles;
+                playerController.transform.rotation = Quaternion.Euler(resetRotation.x, 0, resetRotation.z);
+            }
+        }
+
+        if (player.transform.position.z != 0)
+        {
+            resetPosition = player.transform.position;
+            resetPosition.z = 0.0f;
+            player.transform.position = resetPosition;
+        }
+    }     
+
+    void PlayWithHandSpan()
+    {
+        inputModeSelected = 0;
+        isPlayActive = true;
+        spawners.SetActive(true);
+    }
+
+    void PlayWithHandPoseOrControllers()
+    {
+        inputModeSelected = 1;
+        isPlayActive = true;
+        spawners.SetActive(true);
+    }
+
+    void ManageMovementAndPlayModes()
+    {
+        if(isPlayActive)
+        {
+            if (controlSelectionTextObject.activeInHierarchy) controlSelectionTextObject.SetActive(false);
+            if (scoreTextObject.activeInHierarchy) scoreTextObject.SetActive(false);
+            if (InfoSlab.activeInHierarchy) InfoSlab.SetActive(false);
+
+            switch (inputModeSelected)
+            {
+                case 0: MovePlayerUsingSpan();
+                    break;
+
+                case 1: MovePlayerUsingHandPose();
+                        MovePlayerUsingControllers();
+                    break;
+
+                default: isPlayActive = false;
+                         spawners.SetActive(false);
+                         inputModeSelected = -1;
+                    break;
+            }
+        }
+        else
+        {
+            if (spawners.activeInHierarchy) spawners.SetActive(false);
+            if (!InfoSlab.activeInHierarchy) InfoSlab.SetActive(true);
+
+            if(isStarting)
+            {
+
+                if (scoreTextObject.activeInHierarchy) scoreTextObject.SetActive(false);
+                if (!controlSelectionTextObject.activeInHierarchy) controlSelectionTextObject.SetActive(true);
+
+                //Setting the mode using hand pose.
+                if (isRHandThumbsUp) PlayWithHandSpan();
+                if (isRHandFist) PlayWithHandPoseOrControllers();
+
+                //Setting the mode using controllers.
+                rightController.TryGetFeatureValue(CommonUsages.primaryButton, out bool rightPrimaryButtonValue);
+                rightController.TryGetFeatureValue(CommonUsages.secondaryButton, out bool rightSecondaryButtonValue);
+
+                if (rightPrimaryButtonValue) PlayWithHandSpan();
+                if (rightSecondaryButtonValue) PlayWithHandPoseOrControllers();
+            }
+            else
+            {
+                if (controlSelectionTextObject.activeInHierarchy) controlSelectionTextObject.SetActive(false);
+                if (!scoreTextObject.activeInHierarchy) scoreTextObject.SetActive(true);
+
+                scoreCardTimer += 1.0f * Time.deltaTime;
+
+                if(scoreCardTimer > 5.0f)
+                {
+                    //isStarting = true;
+                    SceneManager.LoadScene("Game");
+                }
+            }
+        }
+    }
+
 }

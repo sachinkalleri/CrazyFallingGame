@@ -140,6 +140,8 @@ public class OVRMeshRenderer : MonoBehaviour
 		IsInitialized = true;
 	}
 
+	public bool shouldRender = false; //Mod
+
 	private void Update()
 	{
 #if UNITY_EDITOR
@@ -155,7 +157,8 @@ public class OVRMeshRenderer : MonoBehaviour
 
 		if (IsInitialized)
 		{
-			bool shouldRender = false;
+			//bool shouldRender = false;
+			shouldRender = false; //mod
 
 			if (_dataProvider != null)
 			{

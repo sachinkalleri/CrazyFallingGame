@@ -20,7 +20,7 @@ public class Spawner : MonoBehaviour
     Quaternion spawnRotation;
 
     public float xOffsetLimit = 9.0f;
-    public float zOffsetLimit = 0.01f;
+    public float zOffsetLimit = 0.01f;   
 
     // Start is called before the first frame update
     void Start()
