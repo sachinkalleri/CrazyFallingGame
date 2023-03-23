@@ -62,7 +62,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: ca5f3c964a5264019aa24ef22755ccaa, type: 2}
+  - {fileID: 2100000, guid: d4c8ebe1922b442138951c76bace90d7, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -127,9 +127,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   type: 3
   isNegative: 0
-  red: {r: 0.6981132, g: 0.02963687, b: 0.02963687, a: 0}
-  blue: {r: 0.2748754, g: 0.49508804, b: 0.8207547, a: 0}
+  isShieldBooster: 0
   isAttached: 0
   wasAttached: 0
   pushAttemptLimit: 10
   inBin: 0
+  objectHum: {fileID: 0}
+  shieldBoosterIndicator: {fileID: 0}

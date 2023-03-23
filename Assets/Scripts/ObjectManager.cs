@@ -21,8 +21,9 @@ public class ObjectManager : MonoBehaviour
     public int pushAttemptLimit = 10;
     public bool inBin = false;
 
-    float wallColorPicker;
     float attachedTimer = 0.0f;
+
+    public AudioSource objectHum;
 
     public GameObject shieldBoosterIndicator;
 
@@ -31,7 +32,8 @@ public class ObjectManager : MonoBehaviour
     {
         gMan = GameObject.FindWithTag("GameManager").GetComponent<GameManager>();
         recycler = GameObject.FindWithTag("Recycler").GetComponent<Recycler>();
-        if (type == 0) InitiateCollectibleBlue();
+        if (type == 0 || type == 1 || type == 2) InitiateObject();
+        if (type == 0 || type == 1|| type == 2) objectHum.Play();
     }
 
     // Update is called once per frame
@@ -65,6 +67,7 @@ public class ObjectManager : MonoBehaviour
         //If object collides with recycler, process to bin it is initiated.        
         if(other.tag == "Recycler" && !inBin)
         {
+            if (type == 0 || type == 1 || type == 2) objectHum.Stop();
             BinIt();
         }
         else
@@ -72,6 +75,11 @@ public class ObjectManager : MonoBehaviour
             if (other.tag == "Player")
             {
                 player = other.gameObject;
+
+                gMan.audioSource.clip = gMan.collisionClips[type];
+                gMan.audioSource.Play();
+
+                if (type == 0 || type == 1 || type == 2) objectHum.Stop();
 
                 if (type == 0)
                 {
@@ -90,7 +98,7 @@ public class ObjectManager : MonoBehaviour
                     gMan.playerLife -= 1.0f;
                     BinIt();
                 }
-                if (type == 2 && !wasAttached && !gMan.shieldStatus)
+                if (type == 2 && !wasAttached && !isAttached && !gMan.shieldStatus)
                 {
                     AttachCreature();
                 }
@@ -103,6 +111,7 @@ public class ObjectManager : MonoBehaviour
         }
     }
 
+    //Checks status and in bin status.
     void ActiveStatusMonitor()
     {
         if (inBin && gameObject.activeInHierarchy)
@@ -116,6 +125,7 @@ public class ObjectManager : MonoBehaviour
         }
     }
 
+    //Method to execute actions of the creature (type 2) depending on its attach status.
     void Creature()
     {
         //Executes when the creature is attached to the player.
@@ -132,10 +142,12 @@ public class ObjectManager : MonoBehaviour
                 gameObject.GetComponent<Rigidbody>().useGravity = true;
                 isAttached = false;
                 attachedTimer = 0.0f;
+                BinIt();
             }
         }
     }
 
+    //Called when creature (type 2) collides with the player.
     void AttachCreature()
     {
         gameObject.GetComponent<Rigidbody>().useGravity = false;
@@ -144,14 +156,14 @@ public class ObjectManager : MonoBehaviour
         isAttached = true;
     }
 
+    //Changes wall color as a factor of playr life.
     void Wall()
     {
-        //wallColorPicker = gMan.playerLife / 10.0f;
-        //wallColor = Color.Lerp(Color.red, blue, wallColorPicker);
         gameObject.GetComponent<Renderer>().material.SetColor("_Color", gMan.lifeStatusColor);
         gameObject.GetComponent<Renderer>().material.SetColor("_EmissionColor", gMan.lifeStatusColor);
     }
 
+    //Used to reset variables and to try and push the object to bin, if failed destroys the object.
     void BinIt()
     {
         if (type == 0) shieldBoosterIndicator.SetActive(false);
@@ -176,7 +188,8 @@ public class ObjectManager : MonoBehaviour
         else inBin = true;
     }
 
-    public void InitiateCollectibleBlue()
+    //Called to initiate objects by resetting important variables.
+    public void InitiateObject()
     {
         if(type == 0)
         {
@@ -191,6 +204,11 @@ public class ObjectManager : MonoBehaviour
                 isShieldBooster = false;
                 shieldBoosterIndicator.SetActive(false);
             }
+        }
+        else if(type == 2)
+        {
+            isAttached = false;
+            wasAttached = false;
         }
     }
 

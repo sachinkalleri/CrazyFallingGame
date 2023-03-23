@@ -53,13 +53,15 @@ public class Spawner : MonoBehaviour
             //If getFromBin fetched relevant object from corresponding bin.
             if (tempObj != null)
             {
-                if (spawnType == 0) tempObj.GetComponent<ObjectManager>().InitiateCollectibleBlue();
+                if (spawnType == 0) tempObj.GetComponent<ObjectManager>().InitiateObject();
 
                 tempObj.transform.rotation = spawnRotation;
                 tempObj.transform.position = spawnPosition;
                 tempObj.GetComponent<ObjectManager>().inBin = false;
                 tempObj.GetComponent<Rigidbody>().velocity = new Vector3(0.0f, 9.8f, 0.0f);
                 tempObj.SetActive(true);
+                tempObj.GetComponent<ObjectManager>().objectHum.Play();
+
                 spawnTimer = 0.0f;
                 timerLimit = Random.Range(5.0f, 10.0f);
                 spawnFlag = false;
